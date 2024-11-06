@@ -1,0 +1,1 @@
+ls -l -a | tr "d" "D" > salida.txt
