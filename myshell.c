@@ -22,7 +22,6 @@ void mycd(char *path, int len) {
     
     if (chdir(dir) != 0)
 	    fprintf(stderr,"Error al cambiar de directorio: %s\n", strerror(errno));
-
 	else
         printf( "El directorio actual es: %s\n", getcwd(buffer,-1));
 }
