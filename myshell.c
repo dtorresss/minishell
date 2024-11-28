@@ -44,33 +44,41 @@ int main(){
 		}
         
         else if (line->ncommands == 1) {
-            if (strncmp(buf, "cd", 2) == 0) {
-                int len_buf = strcspn(buf, "\n");
-                char path[len_buf - 2];
-                strncpy(path, &buf[3], len_buf - 3);
-                path[len_buf - 3] = '\0';
-                mycd(path, strlen(path));
-            }
+            if (strcmp(line->commands[0].argv[0], "cd") == 0)
+                mycd(line->commands[0].argv[1], line->commands[0].argc - 1);
+
+            else if (line->commands->filename == NULL)
+                printf("%s: No se encuentra el mandato\n", line->commands[0].argv[0]);
+
             else {
                 pid = fork();
                 if (pid == 0) {
+                    if (line->redirect_input != NULL) {
+                        int fd_in = open(line->redirect_input, O_RDONLY);
+                        if (fd_in < 0) {
+                            printf("%s: Error. Archivo de entrada no válido.\n", line->redirect_input);
+                            exit(1);
+                        }
+                        dup2(fd_in, STDIN_FILENO);
+                        close(fd_in);
+                    }
                     if (line->redirect_output != NULL) {
                         int fd_out = open(line->redirect_output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
                         if (fd_out < 0) {
-                            printf("Error al abrir el archivo de salida");
+                            printf("%s: Error. Archivo de salida no válido.\n", line->redirect_output);
                             exit(1);
                         }
                         dup2(fd_out, STDOUT_FILENO);
                         close(fd_out);
                     }
-                    if (line->redirect_input != NULL) {
-                        int fd_in = open(line->redirect_input, O_RDONLY);
-                        if (fd_in < 0) {
-                            printf("Error al abrir el archivo de entrada\n");
+                    if (line->redirect_error != NULL) {
+                        int fd_out = open(line->redirect_error, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+                        if (fd_out < 0) {
+                            printf("%s: Error. Archivo de salida de error no válido.\n", line->redirect_error);
                             exit(1);
                         }
-                        dup2(fd_in, STDIN_FILENO);
-                        close(fd_in);
+                        dup2(fd_out, STDERR_FILENO);
+                        close(fd_out);
                     }
                     execvp(line->commands[0].filename, line->commands[0].argv);
                     fprintf(stderr,"Se ha producido un error.\n");
@@ -83,49 +91,64 @@ int main(){
 
         }
 
-        else {
-            pid = fork();
-            if (pid == 0) {
-                pipe(pip_des);
+        else if (line->ncommands == 2){
+            if (line->commands[0].filename == NULL)
+                printf("%s: No se encuentra el mandato\n", line->commands[0].argv[0]);
+            if (line->commands[1].filename == NULL)
+                printf("%s: No se encuentra el mandato\n", line->commands[1].argv[0]);
+
+            else if (line->commands[0].filename != NULL && line->commands[1].filename != NULL) {
                 pid = fork();
-                if (pid == 0){
-                    if (line->redirect_input != NULL) {
-                        int fd_in = open(line->redirect_input, O_RDONLY);
-                        if (fd_in < 0) {
-                            printf("Error al abrir el archivo de entrada\n");
-                            exit(1);
+                if (pid == 0) {
+                    pipe(pip_des);
+                    pid = fork();
+                    if (pid == 0){
+                        if (line->redirect_input != NULL) {
+                            int fd_in = open(line->redirect_input, O_RDONLY);
+                            if (fd_in < 0) {
+                                printf("%s: Error. Archivo de entrada no válido.\n", line->redirect_input);
+                                exit(1);
+                            }
+                            dup2(fd_in, STDIN_FILENO);
+                            close(fd_in);
                         }
-                        dup2(fd_in, STDIN_FILENO);
-                        close(fd_in);
+                        close(pip_des[0]);
+                        dup2(pip_des[1], STDOUT_FILENO);
+                        close(pip_des[1]);
+                        execvp(line->commands[0].filename, line->commands[0].argv);
+                        fprintf(stderr,"Se ha producido un error.\n");
+                        exit(1);            
                     }
-                    close(pip_des[0]);
-                    dup2(pip_des[1], STDOUT_FILENO);
-                    close(pip_des[1]);
-                    execvp(line->commands[0].filename, line->commands[0].argv);
-                    fprintf(stderr,"Se ha producido un error.\n");
-                    exit(1);            
+                    else {
+                        if (line->redirect_output != NULL) {
+                            int fd_out = open(line->redirect_output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+                            if (fd_out < 0) {
+                                printf("%s: Error. Archivo de salida no válido.\n", line->redirect_output);
+                                exit(1);
+                            }
+                            dup2(fd_out, STDOUT_FILENO);
+                            close(fd_out);
+                        }
+                        if (line->redirect_error != NULL) {
+                            int fd_out = open(line->redirect_error, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+                            if (fd_out < 0) {
+                                printf("%s: Error. Archivo de salida de error no válido.\n", line->redirect_error);
+                                exit(1);
+                            }
+                            dup2(fd_out, STDERR_FILENO);
+                            close(fd_out);
+                        }
+                        close(pip_des[1]);
+                        dup2(pip_des[0], STDIN_FILENO);
+                        close(pip_des[0]);
+                        wait(NULL);
+                        execvp(line->commands[1].filename, line->commands[1].argv);
+                        fprintf(stderr,"Se ha producido un error.\n");
+                        exit(1);
+                    }
                 }
-                else {
-                    if (line->redirect_output != NULL) {
-                        int fd_out = open(line->redirect_output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-                        if (fd_out < 0) {
-                            printf("Error al abrir el archivo de salida");
-                            exit(1);
-                        }
-                        dup2(fd_out, STDOUT_FILENO);
-                        close(fd_out);
-                    }
-                    close(pip_des[1]);
-                    dup2(pip_des[0], STDIN_FILENO);
-                    close(pip_des[0]);
+                else
                     wait(NULL);
-                    execvp(line->commands[1].filename, line->commands[1].argv);
-                    fprintf(stderr,"Se ha producido un error.\n");
-                    exit(1);
-                }
-            }
-            else {
-                wait(NULL);
             }
         }
 		printf("msh> ");	
