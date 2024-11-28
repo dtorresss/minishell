@@ -2,6 +2,6 @@
 - Ser capaz de reconocer y ejecutar en foreground lineas con un solo mandato y 0 o más argumentos, redirección de entrada estándar desde archivo y redirección de salida a archivo. (1 punto) ✅
 - Ser capaz de reconocer y ejecutar en foreground lineas con dos mandatos con sus respectivos argumentos, enlazados con '|', y posible redireccion de entrada estandar desde archivo y redireccion de salida archivo. (1 punto) ✅
 - Ser capaz de reconocer y ejecutar en foreground lineas con mas de dos mandatos con sus respectivos argumentos, enlazados con '|', y posible redireccion de entrada estandar desde archivo y redireccion de salida archivo. (4 puntos)
-- Ser capaz de ejecutar el comando cd (0,5 puntos).
+- Ser capaz de ejecutar el comando cd (0,5 puntos). ✅
 - Ser capaz de reconocer y ejecutar background líneas con más de dos mandatos con sus respectivos argumentos, enlazados con '|', redirección de entrada estándar desde archivo y redirección de salida a archivo. Se deben realizar dos comando internos, jobs y fg. (2 puntos)
-- Evitar que los comandos lanzados en background y el minishell mueran al enviar SIGINT y SIGQUIT, mientras que los procesos en foreground respondan ante ellas.
+- Evitar que los comandos lanzados en background y el minishell mueran al enviar SIGINT y SIGQUIT, mientras que los procesos en foreground respondan ante ellas. (1 punto)
