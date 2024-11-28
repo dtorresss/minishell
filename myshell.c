@@ -155,13 +155,3 @@ int main(){
 	}
 	return 0;
 }
-
-
-/*for (i=0; i<line->ncommands; i++) {
-                    printf("orden %d (%s):\n", i, line->commands[i].filename);
-                    for (j=0; j<line->commands[i].argc; j++) {
-                        printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
-                    }
-                }*/
-                //execvp(line->commands->argv[0], line->commands->argv);
-                //fprintf(stderr,"Se ha producido un error.\n");
