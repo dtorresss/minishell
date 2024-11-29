@@ -9,6 +9,14 @@
 #include <signal.h>
 #include "parser.h"
 
+void myjobs() {
+    printf("TODO: Jobs\n");
+}
+
+void myfg() {
+    printf("TODO: Fg\n");
+}
+
 void mycd(char *path, int len) {
     char *dir;
 	char buffer[512];
@@ -49,6 +57,12 @@ int main() {
         else if (line->ncommands == 1) {
             if (strcmp(line->commands[0].argv[0], "cd") == 0)
                 mycd(line->commands[0].argv[1], line->commands[0].argc - 1);
+
+            else if (strcmp(line->commands[0].argv[0], "jobs") == 0)
+                myjobs();
+            
+            else if (strcmp(line->commands[0].argv[0], "fg") == 0)
+                myfg();
             
             else if (strcmp(line->commands[0].argv[0], "exit") == 0)
                 exit(0);
