@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <signal.h>
 #include "parser.h"
 
 void mycd(char *path, int len) {
@@ -26,10 +27,13 @@ void mycd(char *path, int len) {
         printf( "El directorio actual es: %s\n", getcwd(buffer,-1));
 }
 
-int main(){
+int main() {
     char buf[1024];
 	tline * line;
 	int i,j;
+    
+    signal(SIGINT, SIG_IGN);
+    signal(SIGQUIT, SIG_IGN);
 
 	printf("msh> ");	
 	while (fgets(buf, 1024, stdin)) {
@@ -45,6 +49,9 @@ int main(){
         else if (line->ncommands == 1) {
             if (strcmp(line->commands[0].argv[0], "cd") == 0)
                 mycd(line->commands[0].argv[1], line->commands[0].argc - 1);
+            
+            else if (strcmp(line->commands[0].argv[0], "exit") == 0)
+                exit(0);
 
             else if (line->commands->filename == NULL)
                 printf("%s: No se encuentra el mandato\n", line->commands[0].argv[0]);
@@ -52,6 +59,8 @@ int main(){
             else {
                 pid = fork();
                 if (pid == 0) {
+                    signal(SIGINT, SIG_DFL);
+                    signal(SIGQUIT, SIG_DFL);
                     if (line->redirect_input != NULL) {
                         int fd_in = open(line->redirect_input, O_RDONLY);
                         if (fd_in < 0) {
@@ -99,6 +108,8 @@ int main(){
             else if (line->commands[0].filename != NULL && line->commands[1].filename != NULL) {
                 pid = fork();
                 if (pid == 0) {
+                    signal(SIGINT, SIG_DFL);
+                    signal(SIGQUIT, SIG_DFL);
                     pipe(pip_des);
                     pid = fork();
                     if (pid == 0){
