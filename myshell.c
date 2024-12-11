@@ -10,33 +10,37 @@
 #include "parser.h"
 #define BUFFER_SIZE 512
 
-void myjobs() {
+void	myjobs()
+{
 	printf("TODO: Jobs\n");
 }
 
-void myfg() {
+void	myfg()
+{
 	printf("TODO: Fg\n");
 }
 
-void mycd(char *path, int len) {
+void	mycd(char *path, int len)
+{
 	char	*dir;
 	char	buffer[BUFFER_SIZE];
 
-	if (len == 0) {
+	if (len == 0)
+	{
 		dir = getenv("HOME");
 		if (dir == NULL)
-			fprintf(stderr,"No existe la variable $HOME\n");
+			fprintf(stderr, "No existe la variable $HOME\n");
 	}
 	else
 		dir = path;
-	
 	if (chdir(dir) != 0)
-		fprintf(stderr,"Error al cambiar de directorio: %s\n", strerror(errno));
+		fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
 	else
-		printf( "El directorio actual es: %s\n", getcwd(buffer,-1));
+		printf("El directorio actual es: %s\n", getcwd(buffer, -1));
 }
 
-int main() {
+int	main(void)
+{
 	char	buf[BUFFER_SIZE];
 	tline	*line;
 	pid_t	pid;
@@ -44,12 +48,12 @@ int main() {
 
 	signal(SIGINT, SIG_IGN);
 	signal(SIGQUIT, SIG_IGN);
-	printf("msh> ");	
+	printf("msh> ");
 	while (fgets(buf, BUFFER_SIZE, stdin))
 	{
 		line = tokenize(buf);
 
-		if (line==NULL)
+		if (line == NULL)
 			continue;
 		else
 		{
