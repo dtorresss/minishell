@@ -1,17 +1,13 @@
-# Variables
 CC = gcc
-CFLAGS = -Wall -g -O0  # -g para depuración y -O0 para desactivar optimización
-LIBS = -L. -lparser  # Se busca la librería libparser.a en el directorio actual
-SRC = myshell.c  # Asegúrate de incluir tus fuentes aquí
+CFLAGS = -Wall -Wextra -Werror
+LIBS = -L. -lparser
+SRC = myshell.c
 OUT = myshell
 
-# Regla para compilar el ejecutable
-$(OUT): $(SRC) libparser.a  # Añadimos libparser.a explícitamente
+$(OUT): $(SRC) libparser.a
 	$(CC) $(CFLAGS) $(SRC) -o $(OUT) $(LIBS) -static
 
-# Regla por defecto (all)
 all: $(OUT)
 
-# Regla para limpiar los archivos generados
 clean:
 	rm -f $(OUT)

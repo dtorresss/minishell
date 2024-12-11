@@ -1,5 +1,8 @@
 cat archivo.txt | tr 'a-z' 'A-Z'
 cat archivo.txt | tr 'a-z' 'A-Z' | wc -l
+cat archivo.txt | tr 'a-z' 'A-Z' > result.txt
+cat archivo.txt | tr 'a-z' 'A-Z' | wc -l > result.txt
 cat archivo.txt | tr 'a-z' 'A-Z' | tr 'A' 'a' 
+cat archivo.txt | tr 'a-z' 'A-Z' | tr 'A' 'a' > result.txt
 cat archivo.txt | tr 'a-z' 'A-Z' | tr 'A' 'a' | wc -l
 cat archivo.txt | tr 'a-z' 'A-Z' | tr 'A' 'a' | wc -l | tr '1' '0'
