@@ -20,12 +20,12 @@ void	myfg()
 	printf("TODO: Fg\n");
 }
 
-void	mycd(char *path, int len)
+void	mycd(char *path)
 {
 	char	*dir;
 	char	buffer[BUFFER_SIZE];
 
-	if (len == 0)
+	if (path == NULL)
 	{
 		dir = getenv("HOME");
 		if (dir == NULL)
@@ -58,7 +58,7 @@ int	main(void)
 		else
 		{
 			if (strcmp(line->commands[0].argv[0], "cd") == 0)
-				mycd(line->commands[0].argv[1], line->commands[0].argc - 1);
+				mycd(line->commands[0].argv[1]);
 			else if (strcmp(line->commands[0].argv[0], "jobs") == 0)
 				myjobs();
 			else if (strcmp(line->commands[0].argv[0], "fg") == 0)
