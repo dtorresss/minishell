@@ -65,9 +65,6 @@ int	main(void)
 				myfg();
 			else if (strcmp(line->commands[0].argv[0], "exit") == 0)
 				exit(0);
-			else if (line->commands->filename == NULL)
-				printf("%s: No se encuentra el mandato\n", line->commands[0].argv[0]);
-			
 			else {
 				int		pipefd[line->ncommands - 1][2];
 
@@ -81,6 +78,9 @@ int	main(void)
 				}
 				for (i = 0; i < line->ncommands; i++)
 				{
+					if (line->commands[i].filename == NULL)
+						printf("%s: No se encuentra el mandato\n", line->commands[i].argv[0]);
+
 					pid = fork();
 					if (pid < 0)
 					{
