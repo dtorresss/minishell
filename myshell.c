@@ -63,13 +63,11 @@ int updateBG(int contBGLines, proc *bgProcs)
 		if (bgProcs[i].finishedC != bgProcs[i].ncommands)
 		{
 			int j = bgProcs[i].finishedC;
-			//printf("%d %d\n", j, bgProcs[i].pid[j]);
 			while (j < bgProcs[i].ncommands)
 			{
 				pid_t res = waitpid(bgProcs[i].pid[j], NULL, WNOHANG);
 				if (res > 0)
 				{
-					//printf("Res %d\n", res);
 					bgProcs[i].finishedC += 1;
 				}
 				j += 1;
@@ -101,7 +99,6 @@ int	main(void)
 	signal(SIGQUIT, SIG_IGN);
 	while (1)
 	{
-		//printf("Lineas %d\n", contBGLines);
 		contBGLines -= updateBG(contBGLines, bgProcs);
 		printf("msh> ");
 		fgets(buf, BUFFER_SIZE, stdin);
@@ -159,14 +156,11 @@ int	main(void)
 							int aux = 0;
 							if (contBGLines > 0)
 							{
-								//printf("AUX %d, CONT %d\n", aux, contBGLines);
-								//printf("%d %d\n", bgProcs[aux].finishedC, bgProcs[aux].ncommands);
 								while (aux < contBGLines)
 								{
 									if (bgProcs[aux].finishedC == bgProcs[aux].ncommands)
 										break;
 									aux += 1;
-									//printf("AUX %d\n", aux);
 								}
 							}
 							bgProcs[aux] = p;
