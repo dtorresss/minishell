@@ -13,15 +13,22 @@
 typedef struct {
 	char state[8];
 	char command[512];
-	int	pid;
-	tcommand * commands;
+	int ncommands;
+	int	pid[512];
+	int	finishedC;
 } proc;
 
-void	myjobs(proc *proccesesBG, int numProcs)
+void	myjobs(proc bgProcs[512], int contProcs)
 {
-	for (int i = 0; i < numProcs; i++)
-		if (strcmp(proccesesBG[i].state, "Running") == 0)
-			printf("[1]+   %s			%s" , proccesesBG[i].state, proccesesBG[i].command);
+	int cont = 0;
+	for (int i = 0; cont < contProcs; i++)
+	{
+		if (bgProcs[i].finishedC < bgProcs[i].ncommands)
+		{
+			printf("[%d]+	%s			%s", i+1, bgProcs[i].state, bgProcs[i].command);
+			cont += 1;
+		}
+	}
 }
 
 void	myfg()
@@ -48,6 +55,36 @@ void	mycd(char *path)
 		printf("El directorio actual es: %s\n", getcwd(buffer, -1));
 }
 
+int updateBG(int contBGLines, proc *bgProcs)
+{
+	int numFinished = 0;
+	for (int i = 0; i < contBGLines; i++)
+	{
+		if (bgProcs[i].finishedC != bgProcs[i].ncommands)
+		{
+			int j = bgProcs[i].finishedC;
+			//printf("%d %d\n", j, bgProcs[i].pid[j]);
+			while (j < bgProcs[i].ncommands)
+			{
+				pid_t res = waitpid(bgProcs[i].pid[j], NULL, WNOHANG);
+				if (res > 0)
+				{
+					//printf("Res %d\n", res);
+					bgProcs[i].finishedC += 1;
+				}
+				j += 1;
+			}
+			if (bgProcs[i].finishedC == bgProcs[i].ncommands)
+			{
+				strcpy(bgProcs[i].state, "Done");
+				printf("[%d]+ %s		%s", contBGLines, bgProcs[i].state, bgProcs[i].command);
+				numFinished += 1;
+			}
+		}
+	}
+	return numFinished;
+}
+
 int	main(void)
 {
 	char	buf[BUFFER_SIZE];
@@ -55,25 +92,32 @@ int	main(void)
 	pid_t	pid;
 	int		i;
 
-	proc	proccesesBG[512];
-	int		proccesesFG[512];
-	int		currentBG = 0;
+	int pidFG[512];
+	int pidBG[512];
+	int contBGLines = 0;
+	proc	bgProcs[512];
 
 	signal(SIGINT, SIG_IGN);
 	signal(SIGQUIT, SIG_IGN);
 	while (1)
 	{
+		printf("Lineas %d\n", contBGLines);
+		contBGLines -= updateBG(contBGLines, bgProcs);
 		printf("msh> ");
 		fgets(buf, BUFFER_SIZE, stdin);
-		if (buf[0] != '\n')
-			line = tokenize(buf);
-		else
+		
+		if (buf[0] == '\n')
+			continue;
+		
+		line = tokenize(buf);
+
+		if (line == NULL)
 			continue;
 		
 		if (strcmp(line->commands[0].argv[0], "cd") == 0)
 			mycd(line->commands[0].argv[1]);
 		else if (strcmp(line->commands[0].argv[0], "jobs") == 0)
-			myjobs(proccesesBG, currentBG);
+			myjobs(bgProcs, contBGLines);
 		else if (strcmp(line->commands[0].argv[0], "fg") == 0)
 			myfg();
 		else if (strcmp(line->commands[0].argv[0], "exit") == 0)
@@ -96,6 +140,40 @@ int	main(void)
 				{
 					perror("fork");
 					return (EXIT_FAILURE);
+				}
+				else if (pid > 0)
+				{
+					if (line->background == 0)
+						pidFG[i] = pid;
+					else
+					{
+						pidBG[i] = pid;
+						if (i == line->ncommands - 1)
+						{
+							proc p;
+							p.ncommands = line->ncommands;
+							strcpy(p.state, "Running");
+							strcpy(p.command, buf);
+							memcpy(p.pid, pidBG, line->ncommands*sizeof(pidBG[0]));
+							p.finishedC = 0;
+							int aux = 0;
+							if (contBGLines > 0)
+							{
+								//printf("AUX %d, CONT %d\n", aux, contBGLines);
+								//printf("%d %d\n", bgProcs[aux].finishedC, bgProcs[aux].ncommands);
+								while (aux < contBGLines)
+								{
+									if (bgProcs[aux].finishedC == bgProcs[aux].ncommands)
+										break;
+									aux += 1;
+									//printf("AUX %d\n", aux);
+								}
+							}
+							bgProcs[aux] = p;
+							printf("[%d] %d\n", contBGLines + 1, pid);
+							contBGLines+=1;
+						}
+					}
 				}
 				else if (pid == 0)
 				{
@@ -143,7 +221,7 @@ int	main(void)
 						int fd_in = open(line->redirect_input, O_RDONLY);
 						if (fd_in < 0)
 						{
-							printf("%s: Error. Archivo de entrada no válido.\n", line->redirect_input);
+							fprintf(stderr, "%s: Error. Archivo de entrada no válido.\n", line->redirect_input);
 							exit(EXIT_FAILURE);
 						}
 						dup2(fd_in, STDIN_FILENO);
@@ -156,7 +234,7 @@ int	main(void)
 							int fd_out = open(line->redirect_output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 							if (fd_out < 0)
 							{
-								printf("%s: Error. Archivo de salida no válido.\n", line->redirect_output);
+								fprintf(stderr, "%s: Error. Archivo de salida no válido.\n", line->redirect_output);
 								exit(EXIT_FAILURE);
 							}
 							dup2(fd_out, STDOUT_FILENO);
@@ -167,7 +245,7 @@ int	main(void)
 							int fd_out = open(line->redirect_error, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 							if (fd_out < 0)
 							{
-								printf("%s: Error. Archivo de salida de error no válido.\n", line->redirect_error);
+								fprintf(stderr, "%s: Error. Archivo de salida de error no válido.\n", line->redirect_error);
 								exit(EXIT_FAILURE);
 							}
 							dup2(fd_out, STDERR_FILENO);
@@ -178,22 +256,6 @@ int	main(void)
 					fprintf(stderr, "%s: No se encuentra el mandato\n", line->commands[i].argv[0]);
 					exit(EXIT_FAILURE);
 				}
-				else if (pid > 0)
-				{
-					if (line->background == 1)
-					{
-						proc p;
-						strcpy(p.command, buf);
-						strcpy(p.state, "Running");
-						p.commands = line->commands;
-						p.pid = pid;
-						proccesesBG[currentBG] = p;
-						currentBG = currentBG + 1;
-						printf("[%d] %d\n", currentBG, pid);
-					}					
-					else
-						proccesesFG[i] = pid;
-				}
 			}
 			for (int i = 0; i < line->ncommands - 1; i++)
 			{
@@ -203,27 +265,8 @@ int	main(void)
 			if (line->background==0)
 			{
 				for (int i = 0; i < line->ncommands; i++)
-						waitpid(proccesesFG[i], NULL, 0);
+						waitpid(pidFG[i], NULL, 0);
 			}
-			int doneJobs = 0;
-			for (int i = 0; i < currentBG; i++)
-			{
-				//printf("%s %d\n", proccesesBG[i].state, proccesesBG[i].pid);
-				if (strcmp(proccesesBG[i].state, "Running") == 0)
-				{
-					int status = waitpid(proccesesBG[i].pid, NULL, WNOHANG);
-					//printf("Status %d\n", status);
-					if (status > 0)
-					{
-						//printf("Done\n");
-						strcpy(proccesesBG[i].state, "Done");
-						currentBG -= 1;
-						doneJobs += 1;
-					}
-				}
-			}
-			if (doneJobs == line->ncommands)
-				printf("[1]+   done			%s", buf);
 		}
 	}
 	return (EXIT_SUCCESS);
