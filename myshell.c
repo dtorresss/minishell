@@ -101,7 +101,7 @@ int	main(void)
 	signal(SIGQUIT, SIG_IGN);
 	while (1)
 	{
-		printf("Lineas %d\n", contBGLines);
+		//printf("Lineas %d\n", contBGLines);
 		contBGLines -= updateBG(contBGLines, bgProcs);
 		printf("msh> ");
 		fgets(buf, BUFFER_SIZE, stdin);
