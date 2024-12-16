@@ -31,36 +31,35 @@ void	myjobs(proc bgProcs[512], int contProcs)
 	}
 }
 
-void myfg(proc bgProcs[512], int *contProcs, char *buf)
+int myfg(proc *bgProcs, int contProcs, char **proc, int numProc)
 {
-    char	*job_id_str;
-	int		job_id;
-	proc	*bgProc;
-	int		status;
+	int		proccess;
 	
-	job_id_str = strtok(buf, " ");
-    job_id_str = strtok(NULL, " ");
-    if (job_id_str == NULL)
+	if (contProcs > 0)
 	{
-        fprintf(stderr, "Uso: fg <job_id>\n");
-        return (EXIT_FAILURE);
-    }
-	job_id = atoi(job_id_str);
-    if (job_id <= 0 || job_id > *contProcs)
-	{
-        fprintf(stderr, "Error: Job [%d] no encontrado\n", job_id);
-        return (EXIT_FAILURE);
-    }
-    bgProc = &bgProcs[job_id - 1];
-    printf("Llevando al primer plano el trabajo [%d] con PID %d\n", job_id, bgProc->pid[0]);
-    strcpy(bgProc->state, "Foreground");
-    waitpid(bgProc->pid[0], &status, 0);
-    if (WIFEXITED(status))
-        strcpy(bgProc->state, "Done");
-    else if (WIFSIGNALED(status))
-        strcpy(bgProc->state, "Terminado por señal");
-    printf("[%d]+ %s   %s\n", job_id, bgProc->state, bgProc->command);
-    (*contProcs)--;
+		if (numProc == 1)
+		{
+			printf("[%d]+ %s		%s", contProcs, bgProcs[contProcs-1].state, bgProcs[contProcs-1].command);
+			waitpid(bgProcs[contProcs-1].pid[bgProcs[contProcs-1].ncommands - 1], NULL, 0);
+		}
+		else
+		{
+			proccess = atoi(proc[1]);
+			if (proccess <= 0 || proccess > contProcs)
+			{
+				fprintf(stderr, "Error: Mandato con identificador [%d] no encontrado.\n", proccess);
+				return 0;
+			}
+			else
+			{
+				printf("[%d]+ %s		%s", proccess, bgProcs[proccess - 1].state, bgProcs[proccess - 1].command);
+				waitpid(bgProcs[proccess - 1].pid[bgProcs[proccess - 1].ncommands - 1], NULL, 0);
+			}
+		}
+		return 1;
+	}
+	fprintf(stderr, "No hay ningún mandato en foreground.\n");
+	return 0;
 }
 
 void	mycd(char *path)
@@ -143,7 +142,7 @@ int	main(void)
 		else if (strcmp(line->commands[0].argv[0], "jobs") == 0)
 			myjobs(bgProcs, contBGLines);
 		else if (strcmp(line->commands[0].argv[0], "fg") == 0)
-			myfg(bgProcs, &contBGLines, buf);
+			contBGLines -= myfg(bgProcs, contBGLines, line->commands[0].argv, line->commands[0].argc);
 		else if (strcmp(line->commands[0].argv[0], "exit") == 0)
 			exit(EXIT_SUCCESS);
 		else 
@@ -198,8 +197,16 @@ int	main(void)
 				}
 				else if (pid == 0)
 				{
-					signal(SIGINT, SIG_DFL);
-					signal(SIGQUIT, SIG_DFL);
+					if (line->background == 0)
+					{
+						signal(SIGINT, SIG_DFL);
+						signal(SIGQUIT, SIG_DFL);
+					}
+					else
+					{
+						signal(SIGINT, SIG_IGN);
+						signal(SIGQUIT, SIG_IGN);
+					}
 					if (line->ncommands > 1)
 					{
 						if (i == 0)
