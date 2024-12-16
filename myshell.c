@@ -11,11 +11,11 @@
 #define BUFFER_SIZE 512
 
 typedef struct {
-	char state[8];
-	char command[512];
-	int ncommands;
-	int	pid[512];
-	int	finishedC;
+	char	state[8];
+	char	command[512];
+	int		ncommands;
+	int		pid[512];
+	int		finishedC;
 } proc;
 
 void	myjobs(proc bgProcs[512], int contProcs)
@@ -31,9 +31,36 @@ void	myjobs(proc bgProcs[512], int contProcs)
 	}
 }
 
-void	myfg()
+void myfg(proc bgProcs[512], int *contProcs, char *buf)
 {
-	printf("TODO: Fg\n");
+    char	*job_id_str;
+	int		job_id;
+	proc	*bgProc;
+	int		status;
+	
+	job_id_str = strtok(buf, " ");
+    job_id_str = strtok(NULL, " ");
+    if (job_id_str == NULL)
+	{
+        fprintf(stderr, "Uso: fg <job_id>\n");
+        return (EXIT_FAILURE);
+    }
+	job_id = atoi(job_id_str);
+    if (job_id <= 0 || job_id > *contProcs)
+	{
+        fprintf(stderr, "Error: Job [%d] no encontrado\n", job_id);
+        return (EXIT_FAILURE);
+    }
+    bgProc = &bgProcs[job_id - 1];
+    printf("Llevando al primer plano el trabajo [%d] con PID %d\n", job_id, bgProc->pid[0]);
+    strcpy(bgProc->state, "Foreground");
+    waitpid(bgProc->pid[0], &status, 0);
+    if (WIFEXITED(status))
+        strcpy(bgProc->state, "Done");
+    else if (WIFSIGNALED(status))
+        strcpy(bgProc->state, "Terminado por señal");
+    printf("[%d]+ %s   %s\n", job_id, bgProc->state, bgProc->command);
+    (*contProcs)--;
 }
 
 void	mycd(char *path)
@@ -116,7 +143,7 @@ int	main(void)
 		else if (strcmp(line->commands[0].argv[0], "jobs") == 0)
 			myjobs(bgProcs, contBGLines);
 		else if (strcmp(line->commands[0].argv[0], "fg") == 0)
-			myfg();
+			myfg(bgProcs, &contBGLines, buf);
 		else if (strcmp(line->commands[0].argv[0], "exit") == 0)
 			exit(EXIT_SUCCESS);
 		else 
@@ -256,7 +283,7 @@ int	main(void)
 				close(pipefd[i][0]);
 				close(pipefd[i][1]);
 			}
-			if (line->background==0)
+			if (line->background == 0)
 			{
 				for (int i = 0; i < line->ncommands; i++)
 						waitpid(pidFG[i], NULL, 0);
