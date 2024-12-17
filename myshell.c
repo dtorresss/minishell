@@ -41,6 +41,7 @@ int myfg(proc *bgProcs, int contProcs, char **proc, int numProc)
 		{
 			printf("[%d]+ %s		%s", contProcs, bgProcs[contProcs-1].state, bgProcs[contProcs-1].command);
 			waitpid(bgProcs[contProcs-1].pid[bgProcs[contProcs-1].ncommands - 1], NULL, 0);
+			bgProcs[contProcs-1].finishedC = bgProcs[contProcs-1].ncommands;
 			strcpy(bgProcs[contProcs-1].state, "Done");
 		}
 		else
@@ -55,6 +56,7 @@ int myfg(proc *bgProcs, int contProcs, char **proc, int numProc)
 			{
 				printf("[%d]+ %s		%s", proccess, bgProcs[proccess - 1].state, bgProcs[proccess - 1].command);
 				waitpid(bgProcs[proccess - 1].pid[bgProcs[proccess - 1].ncommands - 1], NULL, 0);
+				bgProcs[proccess-1].finishedC = bgProcs[proccess-1].ncommands;
 				strcpy(bgProcs[proccess - 1].state, "Done");
 			}
 		}
