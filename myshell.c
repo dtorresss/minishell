@@ -149,11 +149,28 @@ int	main(void)
 			exit(EXIT_SUCCESS);
 		else 
 		{
-			int		pipefd[line->ncommands - 1][2];
+			int **pipefd = malloc((line->ncommands - 1) * sizeof(int*));
+			if (pipefd == NULL)
+			{
+				perror("malloc");
+				return (EXIT_FAILURE);
+			}
 			for (i = 0; i < line->ncommands - 1; i++)
 			{
+				pipefd[i] = malloc(2 * sizeof(int));
+				if (pipefd[i] == NULL)
+				{
+					perror("malloc");
+					for (int j = 0; j < i; j++)
+						free(pipefd[j]);
+					free(pipefd);
+					return (EXIT_FAILURE);
+				}
 				if (pipe(pipefd[i]) == -1)
 				{
+					for (int j = 0; j <= i; j++)
+						free(pipefd[j]);
+            		free(pipefd);
 					perror("pipe");
 					return (EXIT_FAILURE);
 				}
@@ -164,6 +181,13 @@ int	main(void)
 				if (pid < 0)
 				{
 					perror("fork");
+					for (int j = 0; j < line->ncommands - 1; j++)
+					{
+						close(pipefd[j][0]);
+						close(pipefd[j][1]);
+						free(pipefd[j]);
+					}
+					free(pipefd);
 					return (EXIT_FAILURE);
 				}
 				else if (pid > 0)
@@ -179,7 +203,7 @@ int	main(void)
 							p.ncommands = line->ncommands;
 							strcpy(p.state, "Running");
 							strcpy(p.command, buf);
-							memcpy(p.pid, pidBG, line->ncommands*sizeof(pidBG[0]));
+							memcpy(p.pid, pidBG, line->ncommands * sizeof(pidBG[0]));
 							p.finishedC = 0;
 							int aux = 0;
 							if (contBGLines > 0)
@@ -297,6 +321,11 @@ int	main(void)
 				for (int i = 0; i < line->ncommands; i++)
 						waitpid(pidFG[i], NULL, 0);
 			}
+			for (int i = 0; i < line->ncommands - 1; i++)
+    		{
+        		free(pipefd[i]);
+    		}
+    		free(pipefd);
 		}
 	}
 	return (EXIT_SUCCESS);
