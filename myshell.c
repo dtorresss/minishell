@@ -62,7 +62,7 @@ int myfg(proc *bgProcs, int contProcs, char **proc, int numProc)
 		}
 		return 1;
 	}
-	fprintf(stderr, "No hay ningún mandato en foreground.\n");
+	fprintf(stderr, "No hay ningún mandato en background.\n");
 	return 0;
 }
 
