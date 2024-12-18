@@ -9,21 +9,25 @@
 #include <signal.h>
 #include "parser.h"
 #define BUFFER_SIZE 512
+#define FG_SIZE 512
+#define BG_SIZE 512
 
+// Estructura que almacena información sobre procesos en segundo plano
 typedef struct {
-	char	state[8];
-	char	command[512];
-	int		ncommands;
-	int		pid[512];
-	int		finishedC;
-} proc;
+	char	state[8];		// Estado actual del proceso: "Running", "Done"
+	char	command[BG_SIZE];	// Comando ejecutado
+	int		ncommands;		// Número de comandos en la línea
+	int		pid[BG_SIZE];		// PIDs de los procesos hijos
+	int		finishedC;		 // Número de comandos completados
+}	proc;
 
-void	myjobs(proc bgProcs[512], int contProcs)
+// Función que muestra los trabajos en segundo plano activos
+void	myjobs(proc bgProcs[BG_SIZE], int contProcs)
 {
 	int cont = 0;
-	for (int i = 0; cont < contProcs; i++)
+	for (int i = 0; cont < contProcs; i++)	// Itera sobre los procesos activos
 	{
-		if (bgProcs[i].finishedC < bgProcs[i].ncommands)
+		if (bgProcs[i].finishedC < bgProcs[i].ncommands)	// Solo muestra procesos no finalizados
 		{
 			printf("[%d]+	%s			%s", i+1, bgProcs[i].state, bgProcs[i].command);
 			cont += 1;
@@ -31,28 +35,29 @@ void	myjobs(proc bgProcs[512], int contProcs)
 	}
 }
 
+// Función para traer un trabajo de segundo plano al primer plano
 int myfg(proc *bgProcs, int contProcs, char **proc, int numProc)
 {
 	int		proccess;
 	
 	if (contProcs > 0)
 	{
-		if (numProc == 1)
+		if (numProc == 1)	// Si no se especifica un identificador, se toma el último proceso
 		{
 			printf("[%d]+ %s		%s", contProcs, bgProcs[contProcs-1].state, bgProcs[contProcs-1].command);
 			waitpid(bgProcs[contProcs-1].pid[bgProcs[contProcs-1].ncommands - 1], NULL, 0);
 			bgProcs[contProcs-1].finishedC = bgProcs[contProcs-1].ncommands;
 			strcpy(bgProcs[contProcs-1].state, "Done");
 		}
-		else
+		else	// Si se especifica un número de proceso
 		{
 			proccess = atoi(proc[1]);
-			if (proccess <= 0 || proccess > contProcs)
+			if (proccess <= 0 || proccess > contProcs)	// Validación del proceso
 			{
 				fprintf(stderr, "Error: Mandato con identificador [%d] no encontrado.\n", proccess);
 				return 0;
 			}
-			else
+			else	// Mueve el proceso al primer plano
 			{
 				printf("[%d]+ %s		%s", proccess, bgProcs[proccess - 1].state, bgProcs[proccess - 1].command);
 				waitpid(bgProcs[proccess - 1].pid[bgProcs[proccess - 1].ncommands - 1], NULL, 0);
@@ -66,12 +71,13 @@ int myfg(proc *bgProcs, int contProcs, char **proc, int numProc)
 	return 0;
 }
 
+// Implementación del comando cd
 void	mycd(char *path)
 {
 	char	*dir;
 	char	buffer[BUFFER_SIZE];
 
-	if (path == NULL)
+	if (path == NULL)	// Si no se especifica un directorio usa $HOME
 	{
 		dir = getenv("HOME");
 		if (dir == NULL)
@@ -79,18 +85,20 @@ void	mycd(char *path)
 	}
 	else
 		dir = path;
-	if (chdir(dir) != 0)
+	if (chdir(dir) != 0)	// Cambio de directorio
 		fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
 	else
 		printf("El directorio actual es: %s\n", getcwd(buffer, -1));
 }
 
+// Actualiza los procesos en segundo plano y devuelve cuántos terminaron
 int updateBG(int contBGLines, proc *bgProcs)
 {
 	int numFinished = 0;
-	for (int i = 0; i < contBGLines; i++)
+
+	for (int i = 0; i < contBGLines; i++)	// Recorre todos los procesos en segundo plano
 	{
-		if (bgProcs[i].finishedC != bgProcs[i].ncommands)
+		if (bgProcs[i].finishedC != bgProcs[i].ncommands)	// Solo verifica procesos no finalizados
 		{
 			int j = bgProcs[i].finishedC;
 			while (j < bgProcs[i].ncommands)
@@ -98,11 +106,11 @@ int updateBG(int contBGLines, proc *bgProcs)
 				pid_t res = waitpid(bgProcs[i].pid[j], NULL, WNOHANG);
 				if (res > 0)
 				{
-					bgProcs[i].finishedC += 1;
+					bgProcs[i].finishedC += 1;	// Incrementa contador de procesos finalizados
 				}
 				j += 1;
 			}
-			if (bgProcs[i].finishedC == bgProcs[i].ncommands)
+			if (bgProcs[i].finishedC == bgProcs[i].ncommands)	// Todos los procesos han finalizado
 			{
 				strcpy(bgProcs[i].state, "Done");
 				printf("[%d]+ %s		%s", contBGLines, bgProcs[i].state, bgProcs[i].command);
@@ -110,7 +118,7 @@ int updateBG(int contBGLines, proc *bgProcs)
 			}
 		}
 	}
-	return numFinished;
+	return (numFinished);
 }
 
 int	main(void)
@@ -119,28 +127,28 @@ int	main(void)
 	tline	*line;
 	pid_t	pid;
 	int		i;
+	int		pidFG[FG_SIZE];	// PIDs para procesos en primer plano
+	int		pidBG[BG_SIZE];	// PIDs para procesos en segundo plano
+	int		contBGLines = 0;
+	proc	bgProcs[BG_SIZE];	// Almacena información de procesos en segundo plano
 
-	int pidFG[512];
-	int pidBG[512];
-	int contBGLines = 0;
-	proc	bgProcs[512];
-
+    // Ignora señales para evitar interrupciones no deseadas
 	signal(SIGINT, SIG_IGN);
 	signal(SIGQUIT, SIG_IGN);
 	while (1)
 	{
-		contBGLines -= updateBG(contBGLines, bgProcs);
+		contBGLines -= updateBG(contBGLines, bgProcs);	// Actualiza procesos en segundo plano
 		printf("msh> ");
-		fgets(buf, BUFFER_SIZE, stdin);
+		fgets(buf, BUFFER_SIZE, stdin);	// Lee la entrada del usuario
 		
 		if (buf[0] == '\n')
 			continue;
 		
-		line = tokenize(buf);
+		line = tokenize(buf);	// Tokeniza la línea de entrada
 
 		if (line == NULL)
 			continue;
-		
+		// Implementación de comandos internos
 		if (strcmp(line->commands[0].argv[0], "cd") == 0)
 			mycd(line->commands[0].argv[1]);
 		else if (strcmp(line->commands[0].argv[0], "jobs") == 0)
@@ -149,9 +157,9 @@ int	main(void)
 			contBGLines -= myfg(bgProcs, contBGLines, line->commands[0].argv, line->commands[0].argc);
 		else if (strcmp(line->commands[0].argv[0], "exit") == 0)
 			exit(EXIT_SUCCESS);
-		else 
+		else // Ejecución de comandos externos
 		{
-			int **pipefd = malloc((line->ncommands - 1) * sizeof(int*));
+			int **pipefd = malloc((line->ncommands - 1) * sizeof(int*)); // n - 1 pipes
 			if (pipefd == NULL)
 			{
 				perror("malloc");
