@@ -187,7 +187,7 @@ int	main(void)
 			}
 			for (i = 0; i < line->ncommands; i++)
 			{		
-				pid = fork();
+				pid = fork();	// Crea un proceso hijo para ejecutar cada comando
 				if (pid < 0)
 				{
 					perror("fork");
@@ -200,13 +200,14 @@ int	main(void)
 					free(pipefd);
 					return (EXIT_FAILURE);
 				}
-				else if (pid > 0)
+				else if (pid > 0)	// Código del proceso padre
 				{
+					// Guarda los pids dependiendo de si la ejecución es en foreground o background
 					if (line->background == 0)
-						pidFG[i] = pid;
+						pidFG[i] = pid;	// Guarda los PIDs de procesos foreground
 					else
 					{
-						pidBG[i] = pid;
+						pidBG[i] = pid;	// Guarda los PIDs de procesos background
 						if (i == line->ncommands - 1)
 						{
 							proc p;
@@ -231,21 +232,21 @@ int	main(void)
 						}
 					}
 				}
-				else if (pid == 0)
+				else if (pid == 0)	// Código del proceso hijo
 				{
-					if (line->background == 0)
+					if (line->background == 0) // Configura señales background
 					{
 						signal(SIGINT, SIG_DFL);
 						signal(SIGQUIT, SIG_DFL);
 					}
-					else
+					else	 // Configura señales foreground
 					{
 						signal(SIGINT, SIG_IGN);
 						signal(SIGQUIT, SIG_IGN);
 					}
-					if (line->ncommands > 1)
+					if (line->ncommands > 1)	// Configura pipes para la entrada y salida estándar en el pipeline
 					{
-						if (i == 0)
+						if (i == 0)	// Primer comando, redirige salida estándar al pipe
 						{
 							if (dup2(pipefd[i][1], STDOUT_FILENO) == -1)
 							{
@@ -253,7 +254,7 @@ int	main(void)
 								exit(EXIT_FAILURE);
 							}
 						}
-						if (i == line->ncommands - 1)
+						if (i == line->ncommands - 1)	// Último comando, redirige entrada estándar desde el pipe anterior
 						{
 							if (dup2(pipefd[i - 1][0], STDIN_FILENO) == -1)
 							{
@@ -261,7 +262,7 @@ int	main(void)
 								exit(EXIT_FAILURE);
 							}
 						}
-						if (i > 0 && i < line->ncommands - 1)
+						if (i > 0 && i < line->ncommands - 1)	 // Comandos intermedios, redirige entrada y salida
 						{
 							if (dup2(pipefd[i - 1][0], STDIN_FILENO) == -1)
 							{
@@ -275,12 +276,12 @@ int	main(void)
 							}
 						}
 					}
-					for (int j = 0; j < line->ncommands - 1; j++)
+					for (int j = 0; j < line->ncommands - 1; j++)	// Cierra los pipes en el proceso hijo
 					{
 						close(pipefd[j][0]);
 						close(pipefd[j][1]);
 					}
-					if (i == 0 && line->redirect_input)
+					if (i == 0 && line->redirect_input)	// Redirección de entrada para el primer comando
 					{
 						int fd_in = open(line->redirect_input, O_RDONLY);
 						if (fd_in < 0)
@@ -291,9 +292,9 @@ int	main(void)
 						dup2(fd_in, STDIN_FILENO);
 						close(fd_in);
 					}
-					if (i == line->ncommands - 1)
+					if (i == line->ncommands - 1)	// Redirección de salida y errores para el último comando
 					{
-						if (line->redirect_output)
+						if (line->redirect_output)	// Redirección de salida
 						{
 							int fd_out = open(line->redirect_output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 							if (fd_out < 0)
@@ -304,7 +305,7 @@ int	main(void)
 							dup2(fd_out, STDOUT_FILENO);
 							close(fd_out);
 						}
-						if (line->redirect_error)
+						if (line->redirect_error)	// Redirección de errores
 						{
 							int fd_out = open(line->redirect_error, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 							if (fd_out < 0)
@@ -316,22 +317,22 @@ int	main(void)
 							close(fd_out);
 						}
 					}
-					execvp(line->commands[i].argv[0], line->commands[i].argv);
+					execvp(line->commands[i].argv[0], line->commands[i].argv);	// Ejecucion del comando
 					fprintf(stderr, "%s: No se encuentra el mandato\n", line->commands[i].argv[0]);
 					exit(EXIT_FAILURE);
 				}
 			}
-			for (int i = 0; i < line->ncommands - 1; i++)
+			for (int i = 0; i < line->ncommands - 1; i++)	// Cierra los pipes en el proceso padre
 			{
 				close(pipefd[i][0]);
 				close(pipefd[i][1]);
 			}
-			if (line->background == 0)
+			if (line->background == 0)	// Si es un proceso foreground espera a que todos los procesos hijos finalicen
 			{
 				for (int i = 0; i < line->ncommands; i++)
 						waitpid(pidFG[i], NULL, 0);
 			}
-			for (int i = 0; i < line->ncommands - 1; i++)
+			for (int i = 0; i < line->ncommands - 1; i++)	// Libera la memoria reservada por los pipes
     		{
         		free(pipefd[i]);
     		}
