@@ -15,7 +15,7 @@
 // Estructura que almacena información sobre procesos en segundo plano
 typedef struct {
 	char	state[8];		// Estado actual del proceso: "Running", "Done"
-	char	command[BG_SIZE];	// Comando ejecutado
+	char	command[BG_SIZE];	// Comandos en la línea
 	int		ncommands;		// Número de comandos en la línea
 	int		pid[BG_SIZE];		// PIDs de los procesos hijos
 	int		finishedC;		 // Número de comandos completados
@@ -103,7 +103,7 @@ int updateBG(int contBGLines, proc *bgProcs)
 			int j = bgProcs[i].finishedC;
 			while (j < bgProcs[i].ncommands)
 			{
-				pid_t res = waitpid(bgProcs[i].pid[j], NULL, WNOHANG);
+				pid_t res = waitpid(bgProcs[i].pid[j], NULL, WNOHANG); // Se comprueba cada comando de cada línea haya acabado
 				if (res > 0)
 				{
 					bgProcs[i].finishedC += 1;	// Incrementa contador de procesos finalizados
@@ -234,12 +234,12 @@ int	main(void)
 				}
 				else if (pid == 0)	// Código del proceso hijo
 				{
-					if (line->background == 0) // Configura señales background
+					if (line->background == 0) // Configura señales foreground
 					{
 						signal(SIGINT, SIG_DFL);
 						signal(SIGQUIT, SIG_DFL);
 					}
-					else	 // Configura señales foreground
+					else	 // Configura señales background
 					{
 						signal(SIGINT, SIG_IGN);
 						signal(SIGQUIT, SIG_IGN);
